@@ -26,8 +26,8 @@ public class OrientDBTester {
 
     public static void main(String[] s) {
 
-        int anzahlTags = 1000;
-        int anzahlDokumente = 10000;
+        int anzahlTags = 10;
+        int anzahlDokumente = 100;
         int minTags = 1;
         int maxTags = 10;
         OrientGraph graph;
