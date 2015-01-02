@@ -27,7 +27,7 @@ public class OrientDBTester {
     public static void main(String[] s) {
 
         int anzahlTags = 1000;
-        int anzahlDokumente = 1000000;
+        int anzahlDokumente = 10000;
         int minTags = 1;
         int maxTags = 10;
         OrientGraph graph;
@@ -50,15 +50,23 @@ public class OrientDBTester {
         } catch (Exception e) {
             graph = new OrientGraph("plocal:/Users/thomas/dbOrient/db");
             System.out.println("Neu erstellt");
+            graph.createEdgeType("hatTag");
         }
+        //
         try {
+            graph.begin();
             for (int i = 0; i < tags.length; i++) {
                 Vertex tag = graph.addVertex(null);
                 tag.setProperty("tagname", tags[i]);
-                graph.commit();
+                
             }
+            graph.commit();
+            
             // erstellen von edges
-
+        } catch(Exception e){
+            graph.rollback();
+        }
+        
             Iterator<Vertex> it = graph.getVertices().iterator();
             ArrayList<Vertex> al = new ArrayList<Vertex>();
             while (it.hasNext()) {
@@ -74,44 +82,40 @@ public class OrientDBTester {
                 for (int j = 5; j <= 10; j++) {
                     tag += (char) ((int) (65 + Math.random() * 24));
                 }
-                
+                if (i%1000==0){
+                    System.out.println(""+i);
+                }
                 tag = "D" + i + "-" + tag;
                 //System.out.println(tag);
+                try{
+                    graph.begin();
                 Vertex doc = graph.addVertex(null);
                 doc.setProperty("docname", tag);
-                graph.commit();
+               
                 //System.out.print("Dokument "+tag+" mit id "+doc.getId().toString()+": ");
                 int anzahl = (int) (Math.random() * (maxTags - minTags + 1) + minTags);
 
                 for (int j = 0; j < anzahl; j++) {
                     int zz = (int) (Math.random() * anzahlTags);
                     
-                    Edge e=graph.addEdge(null, doc, al.get(zz), "hatTag");
+                    graph.addEdge("class:hatTag", doc, al.get(zz), "hatTag");
                    // System.out.print(" "+al.get(zz).getProperty("tagname"));
 
                 }
                //System.out.println("");
+                graph.commit();
+                } catch(Exception e){
+                    graph.rollback();
+                }
             }
        
-            graph.commit();
+            
             //Iterator<Vertex> it2 = graph.getVertices("tagname", tags[3]).iterator();
 
             //System.out.println("Hole Vertex 3 mit Inhalt " + tags[3] + ":" + it2.next().getProperty("tagname"));
 
-            Iterator<Vertex> it3 = graph.getVertices().iterator();
-            while (it3.hasNext()) {
-                Vertex v = it3.next();
-                //System.out.println(v.getProperty("docname") + " " + v.getId());
-            }
+          
             
-            Iterator<Edge> it4=graph.getEdges().iterator();
-            int anzahlEcken=0;
-            while (it4.hasNext()) {
-                anzahlEcken++;
-                Edge e = it4.next();
-               // System.out.println("Ecke "+anzahlEcken+" von "+e.getVertex(Direction.OUT).getProperty("docname") + " nach " + e.getVertex(Direction.IN).getProperty("tagname"));
-            }
-            System.out.println("Anzahl Ecken: "+anzahlEcken);
             /* GremlinPipeline pipe=new GremlinPipeline();
              pipe.start(graph.getVertex("#9:3")).property("tagname");
              int treffer=0;
@@ -196,11 +200,7 @@ public class OrientDBTester {
 
             
             
-        } catch (Exception e) {
-
-            graph.rollback();
-            e.printStackTrace();
-        }
+        
         
         
         
