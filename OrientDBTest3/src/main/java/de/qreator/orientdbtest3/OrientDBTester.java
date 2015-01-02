@@ -1,10 +1,11 @@
-5/*
+/*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
 package de.qreator.orientdbtest3;
 
+import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
@@ -26,7 +27,7 @@ public class OrientDBTester {
     public static void main(String[] s) {
 
         int anzahlTags = 1000;
-        int anzahlDokumente = 10000;
+        int anzahlDokumente = 1000000;
         int minTags = 1;
         int maxTags = 10;
         OrientGraph graph;
@@ -157,20 +158,36 @@ public class OrientDBTester {
                 String eingabe=br.readLine();
                 int i=Integer.parseInt(eingabe);
                 zeit1=(new Date()).getTime();
+                
                 if (i>=0){
                     auswahl.add(i);
                     GremlinPipeline pipe=new GremlinPipeline();
+                    
              pipe.start(graph.getVertex(svT.get(i).getId())).in("hatTag").dedup().out("hatTag").dedup();
              treffer=0;
-             while (pipe.hasNext()){
+             ArrayList<Vertex> temp=new ArrayList<Vertex>();
+             Iterator<Vertex> it6=pipe.iterator();
+             while (it6.hasNext()){
              treffer++;
-            pipe.next();
+                
+                Vertex v=it6.next();
+                if (svT.contains(v)){
+                    temp.add(v);
+                }
+                 System.out.println(""+v.getProperty("tagname"));
              //System.out.println("Treffer "+treffer+": "+pipe.next().toString());
              }
-                }
-                zeit2=(new Date()).getTime();
+             svT.clear();
+             for (int k=0;k<temp.size();k++){
+                 svT.add(temp.get(k));
+             }
+             zeit2=(new Date()).getTime();
                 System.out.println("Treffer: "+treffer+", Dauer: "+(zeit2-zeit1)+" ms");
-                weiter=false;
+                } else {
+                    weiter=false;
+                }
+                
+                
             }catch(Exception e){
             e.printStackTrace();
             weiter=false;}
