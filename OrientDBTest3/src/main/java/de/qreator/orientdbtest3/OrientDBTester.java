@@ -5,6 +5,7 @@
  */
 package de.qreator.orientdbtest3;
 
+import com.orientechnologies.common.util.OCallable;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
@@ -17,6 +18,10 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx;
+import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
@@ -24,13 +29,30 @@ import java.util.Iterator;
  */
 public class OrientDBTester {
 
+    static OrientGraph graph;
+
     public static void main(String[] s) {
 
         int anzahlTags = 10;
-        int anzahlDokumente = 100;
+        int anzahlDokumente = 1000;
         int minTags = 1;
-        int maxTags = 10;
-        OrientGraph graph;
+        int maxTags = 5;
+
+        ODatabaseDocumentTx db;
+        System.out.println("Maximale WAL-Größe: " + OGlobalConfiguration.WAL_MAX_SIZE.getValue());
+        OGlobalConfiguration.WAL_MAX_SIZE.setValue(1024); // größe in mb,wie groß der gesamte wal-speicher sein darf
+
+        boolean existiertSchon = true;
+        String dbPath = "plocal:/Users/thomas/dbOrient/db";
+
+        db = new ODatabaseDocumentTx(dbPath);
+        if (!db.exists()) {
+            db.create();
+            existiertSchon = false;
+            System.out.println("Neu erstellt");
+        } else {
+            System.out.println("Existiert schon");
+        }
 
         String[] tags = new String[anzahlTags];
         for (int i = 0; i < anzahlTags; i++) {
@@ -38,175 +60,167 @@ public class OrientDBTester {
             for (int j = 5; j <= 10; j++) {
                 tag += (char) ((int) (65 + Math.random() * 24));
             }
-            System.out.println(tag);
+            //System.out.println(tag);
             tags[i] = tag;
         }
 
-    //OrientGraph graph = new OrientGraph("plocal:/Users/thomas/dbOrient/db");    
+        //OrientGraph graph = new OrientGraph("plocal:/Users/thomas/dbOrient/db");    
         try {
-            OrientGraphFactory factory = new OrientGraphFactory("plocal:/Users/thomas/dbOrient/db").setupPool(1, 10);
+            OrientGraphFactory factory = new OrientGraphFactory(dbPath).setupPool(1, 10);
             graph = factory.getTx();
-            System.out.println("Existiert schon");
+            if (!existiertSchon) {
+                // http://www.kwoxer.de/2014/11/12/daten-import-via-java-orientdb-real-beispiel-tutorial/
+                graph.executeOutsideTx(new OCallable<Object, OrientBaseGraph>() {
+                    public Object call(OrientBaseGraph iArgument) {
+                        graph.createVertexType("tag").setClusterSelection("default");
+                        graph.createVertexType("doc").setClusterSelection("default");
+                        graph.createEdgeType("hatTag").setClusterSelection("default");
+                        return null;
+                    }
+                });
+            }
         } catch (Exception e) {
-            graph = new OrientGraph("plocal:/Users/thomas/dbOrient/db");
-            System.out.println("Neu erstellt");
-            graph.createEdgeType("hatTag");
+
         }
         //
         try {
-            graph.begin();
+
             for (int i = 0; i < tags.length; i++) {
-                Vertex tag = graph.addVertex(null);
+                Vertex tag = graph.addVertex("class:tag");
                 tag.setProperty("tagname", tags[i]);
-                
+
             }
             graph.commit();
-            
+
             // erstellen von edges
-        } catch(Exception e){
+        } catch (Exception e) {
             graph.rollback();
         }
-        
-            Iterator<Vertex> it = graph.getVertices().iterator();
-            ArrayList<Vertex> al = new ArrayList<Vertex>();
-            while (it.hasNext()) {
-                Vertex v = it.next();
-                if (v.getProperty("tagname") != null) { // tag-vertex
-                    al.add(v);
-                }
 
+        Iterator<Vertex> it = graph.getVerticesOfClass("tag").iterator();
+        ArrayList<Vertex> al = new ArrayList<Vertex>();
+        while (it.hasNext()) {
+            Vertex v = it.next();
+
+            al.add(v);
+
+        }
+
+        for (int i = 0; i < anzahlDokumente; i++) {
+            String tag = "";
+            for (int j = 5; j <= 10; j++) {
+                tag += (char) ((int) (65 + Math.random() * 24));
             }
+            if (i % 1000 == 0) {
+                System.out.println("" + i);
+            }
+            tag = "D" + i + "-" + tag;
+            //System.out.println(tag);
+            try {
 
-            for (int i = 0; i < anzahlDokumente; i++) {
-                String tag = "";
-                for (int j = 5; j <= 10; j++) {
-                    tag += (char) ((int) (65 + Math.random() * 24));
-                }
-                if (i%1000==0){
-                    System.out.println(""+i);
-                }
-                tag = "D" + i + "-" + tag;
-                //System.out.println(tag);
-                try{
-                    graph.begin();
-                Vertex doc = graph.addVertex(null);
+                Vertex doc = graph.addVertex("class:doc");
                 doc.setProperty("docname", tag);
-               
+
                 //System.out.print("Dokument "+tag+" mit id "+doc.getId().toString()+": ");
                 int anzahl = (int) (Math.random() * (maxTags - minTags + 1) + minTags);
 
                 for (int j = 0; j < anzahl; j++) {
                     int zz = (int) (Math.random() * anzahlTags);
-                    
-                    graph.addEdge("class:hatTag", doc, al.get(zz), "hatTag");
+                    doc.addEdge("hatTag", al.get(zz));
+                    //graph.addEdge("class:hatTag", doc, al.get(zz),null);
+
                    // System.out.print(" "+al.get(zz).getProperty("tagname"));
-
                 }
-               //System.out.println("");
+                //System.out.println("");
                 graph.commit();
-                } catch(Exception e){
-                    graph.rollback();
-                }
+            } catch (Exception e) {
+                graph.rollback();
             }
-       
-            
-            //Iterator<Vertex> it2 = graph.getVertices("tagname", tags[3]).iterator();
-
-            //System.out.println("Hole Vertex 3 mit Inhalt " + tags[3] + ":" + it2.next().getProperty("tagname"));
-
-          
-            
-            /* GremlinPipeline pipe=new GremlinPipeline();
-             pipe.start(graph.getVertex("#9:3")).property("tagname");
-             int treffer=0;
-             while (pipe.hasNext()){
-             treffer++;
-            
-             System.out.println("Treffer "+treffer+": "+pipe.next());
-             }*/
-            /* Vertex luca = graph.addVertex(null); // 1st OPERATION: IMPLICITLY BEGIN A TRANSACTION
-             luca.setProperty("name", "Thomas");
-             Vertex marko = graph.addVertex(null);
-             marko.setProperty("name", "Patrick");
-             Edge lucaKnowsMarko = graph.addEdge(null, luca, marko, "knows");
-             graph.commit();*/
-            
-            
-             // tests zur geschwindigkeit
-             boolean weiter=true;
-                long zeit1=(new Date()).getTime();
-                Iterator<Vertex> it5=graph.getVertices().iterator();
-                ArrayList<Vertex> alleTags=new ArrayList<Vertex>();
-                ArrayList<Vertex> svT=new ArrayList<Vertex>();
-                while(it5.hasNext()){
-                    Vertex v=it5.next();
-                    if (v.getProperty("tagname")!=null){
-                    alleTags.add(v);
-                    svT.add(v);
-                    }
-                }
-                long zeit2=(new Date()).getTime();
-                System.out.println("Dauer für Tagsuche: "+(zeit2-zeit1)+" ms");
-                BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
- 
-                ArrayList<Integer> auswahl=new ArrayList<Integer>();
-        while (weiter){
-            // liste aller sinnvollen tags ausgeben
-            System.out.println("Liste der Tags: ");
-            for (int i=0;i<svT.size();i++){
-                System.out.println(i+": "+svT.get(i).getProperty("tagname"));
-            }
-            System.out.print("Bitte Nummer wählen: ");
-            int treffer=0;
-            try{
-                String eingabe=br.readLine();
-                int i=Integer.parseInt(eingabe);
-                zeit1=(new Date()).getTime();
-                
-                if (i>=0){
-                    auswahl.add(i);
-                    GremlinPipeline pipe=new GremlinPipeline();
-                    
-             pipe.start(graph.getVertex(svT.get(i).getId())).in("hatTag").dedup().out("hatTag").dedup();
-             treffer=0;
-             ArrayList<Vertex> temp=new ArrayList<Vertex>();
-             Iterator<Vertex> it6=pipe.iterator();
-             while (it6.hasNext()){
-             treffer++;
-                
-                Vertex v=it6.next();
-                if (svT.contains(v)){
-                    temp.add(v);
-                }
-                 System.out.println(""+v.getProperty("tagname"));
-             //System.out.println("Treffer "+treffer+": "+pipe.next().toString());
-             }
-             svT.clear();
-             for (int k=0;k<temp.size();k++){
-                 svT.add(temp.get(k));
-             }
-             zeit2=(new Date()).getTime();
-                System.out.println("Treffer: "+treffer+", Dauer: "+(zeit2-zeit1)+" ms");
-                } else {
-                    weiter=false;
-                }
-                
-                
-            }catch(Exception e){
-            e.printStackTrace();
-            weiter=false;}
-            
         }
 
+            //Iterator<Vertex> it2 = graph.getVertices("tagname", tags[3]).iterator();
+            //System.out.println("Hole Vertex 3 mit Inhalt " + tags[3] + ":" + it2.next().getProperty("tagname"));
+        /* GremlinPipeline pipe=new GremlinPipeline();
+         pipe.start(graph.getVertex("#9:3")).property("tagname");
+         int treffer=0;
+         while (pipe.hasNext()){
+         treffer++;
             
-            
-        
-        
-        
-        
-       
+         System.out.println("Treffer "+treffer+": "+pipe.next());
+         }*/
+        /* Vertex luca = graph.addVertex(null); // 1st OPERATION: IMPLICITLY BEGIN A TRANSACTION
+         luca.setProperty("name", "Thomas");
+         Vertex marko = graph.addVertex(null);
+         marko.setProperty("name", "Patrick");
+         Edge lucaKnowsMarko = graph.addEdge(null, luca, marko, "knows");
+         graph.commit();*/
+        // tests zur geschwindigkeit
+        boolean weiter = true;
+        long zeit1 = (new Date()).getTime();
+        Iterator<Vertex> it5 = graph.getVerticesOfClass("tag").iterator();
+        ArrayList<Vertex> alleTags = new ArrayList<Vertex>();
+        ArrayList<Vertex> svT = new ArrayList<Vertex>();
+        while (it5.hasNext()) {
+            Vertex v = it5.next();
+
+            alleTags.add(v);
+            svT.add(v);
+
+        }
+        long zeit2 = (new Date()).getTime();
+        System.out.println("Dauer für Tagsuche: " + (zeit2 - zeit1) + " ms");
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+        ArrayList<Integer> auswahl = new ArrayList<Integer>();
+        while (weiter) {
+            // liste aller sinnvollen tags ausgeben
+            System.out.println("Liste der Tags: ");
+            for (int i = 0; i < svT.size(); i++) {
+                System.out.println(i + ": " + svT.get(i).getProperty("tagname"));
+            }
+            System.out.print("Bitte Nummer wählen: ");
+            int treffer = 0;
+            try {
+                String eingabe = br.readLine();
+                int i = Integer.parseInt(eingabe);
+                zeit1 = (new Date()).getTime();
+
+                if (i >= 0) {
+                    auswahl.add(i);
+                    HashMap m = new HashMap();
+                    GremlinPipeline pipe = new GremlinPipeline();
+
+                    pipe.start(graph.getVertex(svT.get(i).getId())).in("hatTag").dedup().out("hatTag").groupCount(m).dedup();
+                    treffer = 0;
+                    ArrayList<Vertex> temp = new ArrayList<Vertex>();
+                    Iterator<Vertex> it6 = pipe.iterator();
+                    while (it6.hasNext()) {
+                        treffer++;
+
+                        Vertex v = it6.next();
+                        if (svT.contains(v)) {
+                            temp.add(v);
+                        }
+                // System.out.println(""+v.getProperty("tagname"));
+                        //System.out.println("Treffer "+treffer+": "+pipe.next().toString());
+                    }
+                    svT.clear();
+                    for (int k = 0; k < temp.size(); k++) {
+                        svT.add(temp.get(k));
+                    }
+                    zeit2 = (new Date()).getTime();
+                    System.out.println("Treffer: " + treffer + ", Dauer: " + (zeit2 - zeit1) + " ms");
+                } else {
+                    weiter = false;
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                weiter = false;
+            }
+
+        }
+
     }
-    
-    
 
 }
