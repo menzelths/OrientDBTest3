@@ -97,6 +97,7 @@ public class OrientDBTester {
             for (int i = 0; i < tags.length; i++) {
                 Vertex tag = graph.addVertex("class:tag");
                 tag.setProperty("tagname", tags[i]);
+                tag.setProperty("anzahl", 0L);
                 tagVertex.addEdge("hat", tag);
             }
             graph.commit();
@@ -135,11 +136,14 @@ public class OrientDBTester {
 
                 for (int j = 0; j < anzahl; j++) {
                     int zz = (int) (Math.random() * anzahlTags);
-                    doc.addEdge("hatTag", al.get(zz));
+                    Vertex v=al.get(zz);
+                    doc.addEdge("hatTag", v);
+                    v.setProperty("anzahl", (Long)(v.getProperty("anzahl"))+1);
                     //graph.addEdge("class:hatTag", doc, al.get(zz),null);
 
                     //  System.out.print(" "+al.get(zz).getProperty("tagname"));
                 }
+                
                 // System.out.println("");
                 graph.commit();
             } catch (Exception e) {
@@ -180,7 +184,7 @@ public class OrientDBTester {
         while (it10.hasNext()) {
             // legt die hashmap an
             Vertex v=it10.next();
-            
+            m.put(v, v.getProperty("anzahl"));
             //long anzahlEcken=(new GremlinPipeline(v)).inE("hatTag").count();
             //m.put(v, graph.getEdges);
             svT.add(v);
@@ -270,6 +274,9 @@ public class OrientDBTester {
                         treffer++;
 
                         Vertex v = it6.next();
+                        if (neustart){
+                        m.put(v, v.getProperty("anzahl"));
+                        }
                         /*if (neustart){
                         long anzahlEcken=(new GremlinPipeline(v)).inE("hatTag").count();
             m.put(v, anzahlEcken);
