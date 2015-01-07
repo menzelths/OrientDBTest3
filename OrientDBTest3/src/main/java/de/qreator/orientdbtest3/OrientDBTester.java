@@ -175,8 +175,8 @@ public class OrientDBTester {
         boolean weiter = true;
         HashMap m = new HashMap();
         Iterator<Vertex> it9 = graph.getVerticesOfClass("tags").iterator(); //haupttag holen   
-        long letzteZeit=0;
-        int letzteTreffer=0;
+        long letzteZeit = 0;
+        int letzteTreffer = 0;
 
         long zeit1 = (new Date()).getTime();
         ArrayList<Vertex> svT = new ArrayList<>();
@@ -209,56 +209,57 @@ public class OrientDBTester {
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
         ArrayList<Vertex> auswahl = new ArrayList<>();
-        ArrayList<Vertex> docs=new ArrayList<>();
-        HashMap  docmap=new HashMap<>();
+        ArrayList<Vertex> docs = new ArrayList<>();
+        HashMap docmap = new HashMap<>();
         boolean neustart = false;
-        Table t=new Table();
+        Table t = new Table();
         //Pipe p=Gremlin.compile("_().table(t){it.name}");
         while (weiter) {
             // liste aller sinnvollen tags ausgeben
             System.out.println("Liste der Tags: ");
             for (int i = 0; i < svT.size(); i++) {
-                Vertex v=svT.get(i);
+                Vertex v = svT.get(i);
                 if (m.get(v) != null && (long) (m.get(v)) > 0) {
-                    
+
                     System.out.print((i + 1) + ": " + v.getProperty("tagname"));
                     if (m.get(v) != null) {
                         System.out.print(", Anzahl: " + m.get(v));
-                        
-                    } 
-                        System.out.println("");
-                    
+
+                    }
+                    System.out.println("");
+
                 } /*else {
-                    System.out.println((i + 1) + ": " + svT.get(i).getProperty("tagname"));
-                }*/
+                 System.out.println((i + 1) + ": " + svT.get(i).getProperty("tagname"));
+                 }*/
+
             }
-            if (t.getRowCount()>0){
+            if (t.getRowCount() > 0) {
                 System.out.println("Dokumente mit diesen Tags:");
-            for (int i=0;i<t.getRowCount();i++){
-                
-                Vertex v=(Vertex)(t.get(i,0));
-                System.out.print(i+": "+v.getProperty("docname")+": ");
-                GremlinPipeline gp=new GremlinPipeline();
-                gp.start(v).out("hatTag").dedup(); // alle tags holen
-                Iterator it12=gp.iterator();
-                int z=0;
-                while (it12.hasNext()){
-                    System.out.print(" "+((Vertex)(it12.next())).getProperty("tagname"));
-                    z++;
+                for (int i = 0; i < t.getRowCount(); i++) {
+
+                    Vertex v = (Vertex) (t.get(i, 0));
+                    System.out.print(i + ": " + v.getProperty("docname") + ": ");
+                    GremlinPipeline gp = new GremlinPipeline();
+                    gp.start(v).out("hatTag").dedup(); // alle tags holen
+                    Iterator it12 = gp.iterator();
+                    int z = 0;
+                    while (it12.hasNext()) {
+                        System.out.print(" " + ((Vertex) (it12.next())).getProperty("tagname"));
+                        z++;
+                    }
+                    if (z == auswahl.size()) { // alle tags erfüllt
+                        System.out.print(" ****");
+                    }
+                    System.out.println("");
                 }
-                if (z==auswahl.size()){ // alle tags erfüllt
-                    System.out.print(" ****");
-                }
-                System.out.println("");
-            }
             }
             System.out.print("Gewählte Tags: ");
             for (int i = 0; i < auswahl.size(); i++) {
                 System.out.print("-" + (i + 1) + ": " + auswahl.get(i).getProperty("tagname") + "  ");
             }
             System.out.println("");
-            if (letzteZeit>0){
-                System.out.println("Treffer: "+letzteTreffer+", Dauer: "+letzteZeit+" ms");
+            if (letzteZeit > 0) {
+                System.out.println("Treffer: " + letzteTreffer + ", Dauer: " + letzteZeit + " ms");
             }
             System.out.print("Bitte Nummer wählen ('q' zum beenden): ");
             int treffer = 0;
@@ -269,7 +270,7 @@ public class OrientDBTester {
                 } else {
                     int i = Integer.parseInt(eingabe);
                     zeit1 = (new Date()).getTime();
-                    
+
                     GremlinPipeline pipe = new GremlinPipeline();
                     if (i > 0) {
                         i--;
@@ -294,12 +295,12 @@ public class OrientDBTester {
                         }
 
                     }
-                    
+
                     m = new HashMap();
-                    t=new Table();
-                   /* docs=new ArrayList<>();
-                    docmap=new HashMap();*/
-             
+                    t = new Table();
+                    /* docs=new ArrayList<>();
+                     docmap=new HashMap();*/
+
                     for (int j = 0; j < auswahl.size(); j++) { // überprüft alle tags (entspricht "und")
                         pipe.as("x").out("hatTag").has("tagname", auswahl.get(j).getProperty("tagname")).back("x");
                     }
@@ -313,13 +314,13 @@ public class OrientDBTester {
 
                     while (it6.hasNext()) {
                         treffer++;
-                        
+
                         Vertex v = it6.next();
-                     /*   if (docs.size()>0){
-                        docmap.put(v, docs);
-                        docs=new ArrayList<>();
-                        }*/
-                        
+                        /*   if (docs.size()>0){
+                         docmap.put(v, docs);
+                         docs=new ArrayList<>();
+                         }*/
+
                         if (neustart) {
                             m.put(v, v.getProperty("anzahl"));
                         }
@@ -341,8 +342,8 @@ public class OrientDBTester {
                      }*/
                     zeit2 = (new Date()).getTime();
                     System.out.println("Treffer: " + treffer + ", Dauer: " + (zeit2 - zeit1) + " ms");
-                    letzteZeit=(zeit2-zeit1);
-                    letzteTreffer=treffer;
+                    letzteZeit = (zeit2 - zeit1);
+                    letzteTreffer = treffer;
                 }
 
             } catch (Exception e) {
