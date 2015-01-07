@@ -34,11 +34,11 @@ public class OrientDBTester {
 
     public static void main(String[] s) {
 
-        int anzahlTags = 1000;
-        int anzahlDokumente = 1000000;
+        int anzahlTags = 100;
+        int anzahlDokumente = 10000;
                
-        int minTags = 2;
-        int maxTags = 10;
+        int minTags = 1;
+        int maxTags = 5;
         boolean neuErstellen=true;
 
         ODatabaseDocumentTx db;
@@ -239,8 +239,10 @@ public class OrientDBTester {
                     GremlinPipeline pipe = new GremlinPipeline();
                     if (i > 0) {
                         i--;
-                        auswahl.add(graph.getVertex(svT.get(i).getId()));
-                        pipe.start(graph.getVertex(svT.get(i).getId())).in("hatTag").dedup();
+                        //auswahl.add(graph.getVertex(svT.get(i).getId()));
+                        //pipe.start(graph.getVertex(svT.get(i).getId())).in("hatTag").dedup();
+                        auswahl.add(svT.get(i));
+                        pipe.start(svT.get(i)).in("hatTag").dedup();
                         svT.remove(i);
                     } else {
                         i = -i;
@@ -261,7 +263,7 @@ public class OrientDBTester {
                     m = new HashMap();
 
                     for (int j = 0; j < auswahl.size(); j++) { // überprüft alle tags
-                        pipe.as("x" + j).out("hatTag").has("tagname", auswahl.get(j).getProperty("tagname")).back("x" + j);
+                        pipe.as("x" ).out("hatTag").has("tagname", auswahl.get(j).getProperty("tagname")).back("x" );
                     }
                     if (!neustart){
                     pipe.out("hatTag").groupCount(m).dedup();
